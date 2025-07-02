@@ -192,4 +192,4 @@ For support and questions, please contact the development team or create an issu
 
 ---
 
-**Note**: This is a demonstration application. For production use, ensure proper security measures, backend integration, and compliance with healthcare regulations. 
+**Note**: This is a demonstration application. For production use, ensure proper security measures, backend integration, and compliance with healthcare regulations.
