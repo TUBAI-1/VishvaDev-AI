@@ -92,7 +92,7 @@ src/
 
 ### Authentication Flow
 
-1. **Sign Up Process**:
+1. **Sign Up Process**: 
    - Full name, email, and password input
    - Password strength validation with visual indicators
    - Terms and conditions agreement
