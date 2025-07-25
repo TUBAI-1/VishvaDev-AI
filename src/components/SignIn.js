@@ -51,7 +51,7 @@ const SignIn = () => {
             Welcome Back
           </h2>
           <p className="text-gray-600">
-            Sign in to your Chanakya Doctor AI account
+            Sign in to your VishvaDev AI account
           </p>
         </div>
 
@@ -153,7 +153,7 @@ const SignIn = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">New to Chanakya Doctor AI?</span>
+                <span className="px-2 bg-white text-gray-500">New to VishvaDev AI?</span>
               </div>
             </div>
 
@@ -170,11 +170,11 @@ const SignIn = () => {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
-          <p>© 2024 Chanakya Doctor AI. All rights reserved.</p>
+          <p>© 2024 VishvaDev AI. All rights reserved.</p>
         </div>
       </div>
     </div>
   );
 };
 
-export default SignIn; 
+export default SignIn;

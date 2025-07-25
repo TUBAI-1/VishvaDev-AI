@@ -1,7 +1,7 @@
 {
   "name": "chanakya-doctor-ai",
   "version": "1.0.0",
-  "description": "Chanakya Doctor AI - Medical Chatbot with Authentication",
+  "description": "VishvaDev AI - Medical Chatbot with Authentication",
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",

@@ -76,7 +76,7 @@ const Dashboard = () => {
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
           <div className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-medical-600">Chanakya Doctor AI</span>
+            <span className="text-2xl font-bold text-medical-600">VishvaDev AI</span>
           </div>
           <nav className="flex items-center space-x-8 text-gray-700 text-base font-medium">
             <a href="#" className="hover:text-medical-600">Home</a>
@@ -140,4 +140,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

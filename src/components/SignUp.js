@@ -74,7 +74,7 @@ const SignUp = () => {
             Create Account
           </h2>
           <p className="text-gray-600">
-            Join Chanakya Doctor AI for personalized medical assistance
+            Join VishvaDev AI for personalized medical assistance
           </p>
         </div>
 
@@ -273,11 +273,11 @@ const SignUp = () => {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
-          <p>© 2024 Chanakya Doctor AI. All rights reserved.</p>
+          <p>© 2024 VishvaDev AI. All rights reserved.</p>
         </div>
       </div>
     </div>
   );
 };
 
-export default SignUp; 
+export default SignUp;

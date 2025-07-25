@@ -83,7 +83,7 @@ const ChatDashboard = () => {
     <div className="bg-green-50 min-h-screen font-serif">
       <div className="max-w-2xl mx-auto p-4">
         <header style={{ backgroundColor: '#e6f9ed' }} className="text-center p-4 rounded">
-          <h1 className="text-2xl font-bold text-green-700">CHANAKYA DOCTOR AI</h1>
+          <h1 className="text-2xl font-bold text-green-700">VISHVADEV AI</h1>
           <p className="text-sm text-green-800">Experience AI Conversations</p>
           {selectedDoctor && (
             <div className="mt-4 flex flex-col items-center">
@@ -141,4 +141,4 @@ const ChatDashboard = () => {
   );
 };
 
-export default ChatDashboard; 
+export default ChatDashboard;

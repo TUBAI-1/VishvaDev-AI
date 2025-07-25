@@ -1,4 +1,4 @@
-# Chanakya Doctor AI - Medical Chatbot
+# VishvaDev AI - Medical Chatbot
 
 A modern, responsive web application featuring a medical AI chatbot with user authentication and a beautiful medical-themed interface.
 
