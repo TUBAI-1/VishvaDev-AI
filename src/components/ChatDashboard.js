@@ -5,6 +5,9 @@ const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 const ChatDashboard = () => {
   const [input, setInput] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const [speaking, setSpeaking] = useState(false);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -44,8 +47,70 @@ const ChatDashboard = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    // Initialize SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+        console.log('Voice recognition started. Speak into the microphone.');
+      };
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        console.log('Transcript:', transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        console.log('Voice recognition ended.');
+      };
+    } else {
+      console.warn('Speech Recognition API not supported in this browser.');
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (recognitionRef.current) {
+      if (isListening) {
+        recognitionRef.current.stop();
+      } else {
+        setInput(''); // Clear previous input before starting new recognition
+        recognitionRef.current.start();
+      }
+    }
+  };
+
   const addMessage = (sender, message) => {
     setMessages(prev => [...prev, [sender, message]]);
+  };
+
+  const speakText = (text) => {
+    if ('speechSynthesis' in window) {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        setSpeaking(false);
+      } else {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onstart = () => setSpeaking(true);
+        utterance.onend = () => setSpeaking(false);
+        utterance.onerror = () => setSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+      }
+    } else {
+      console.warn('Speech Synthesis API is not supported by this browser.');
+    }
   };
 
   const clearChat = () => {
@@ -121,32 +186,50 @@ const ChatDashboard = () => {
     let currentInput = input.trim();
     setInput(''); // Clear input immediately
 
-    let promptContent = currentInput;
+    let promptContent;
     let userDisplayMessage = currentInput;
+
+    // Check if it's the very first message in the chat session
+    const isFirstUserMessage = messages.length === 0;
+
+    if (isFirstUserMessage) {
+      // For the very first message, AI asks for patient details
+      promptContent = `The user has initiated the conversation. Please respond with a greeting, then ask for the patient's name, age, and disease. Each point should be on a new line.`;
+    } else if (messages.length === 2) { // This means user is sending their second message, after AI's initial greeting
+      // For the second message, AI should process the patient info provided by the user
+      // and then confirm it before proceeding to prescription format.
+      // I will instruct Gemini to acknowledge the information and then state it's ready for further queries.
+      promptContent = `The user has provided information. Please acknowledge the patient's name, age, and disease/symptoms from the following input: "${currentInput}". Confirm that you have received this information and state that you are now ready to provide medical advice or prescriptions based on further queries. Do NOT generate a prescription yet. Each point should be on a new line.`;
+    } else {
+      // For all subsequent messages (after patient info is acknowledged)
+      promptContent = `Please provide the response in the format of a doctor's prescription, including sections for 'Impressions', 'Medicines', and 'Next Follow-up'. Each item within these sections should be on a new line. ${currentInput}`; 
+    }
 
     if (selectedFile) {
       userDisplayMessage = `Uploaded file: ${selectedFile.name}`;
       addMessage('User', userDisplayMessage); // Display file upload message
-      
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         const fileContent = event.target.result;
         if (selectedFile.type.startsWith('image/')) {
-          promptContent = [
-            { type: 'text', text: 'Please provide the analysis in bullet points, highlighting important suggestions:' },
-            { type: 'text', text: 'Analyze this image:' },
-            { type: 'image_url', image_url: { url: fileContent } },
-          ];
-          await callGeminiAPI(promptContent);
+          if (!isFirstUserMessage && messages.length !== 2) { // Only include image for prescription phase
+            promptContent = [
+              { type: 'text', text: promptContent },
+              { type: 'image_url', image_url: { url: fileContent } }
+            ];
+          }
         } else {
-          // Assume text-based file
-          promptContent = `Analyze the following prescription and provide the analysis in bullet points, highlighting important suggestions:\n\n${fileContent}`;
-          await callGeminiAPI(promptContent);
+          if (!isFirstUserMessage && messages.length !== 2) { // Only include file content for prescription phase
+            promptContent = `${promptContent}\n\nFile Content:\n${fileContent}`;
+          }
         }
-        setSelectedFile(null); // Clear selected file after processing
+        await callGeminiAPI(promptContent);
+        setSelectedFile(null); // Clear selected file after sending
       };
       reader.readAsDataURL(selectedFile);
     } else {
+      // Text-only message
       addMessage('User', userDisplayMessage); // Display text message
       await callGeminiAPI(promptContent);
     }
@@ -198,36 +281,45 @@ const ChatDashboard = () => {
               ) : (
                 <div className="text-left">
                   <span style={{ backgroundColor: '#bbf7d0' }} className="text-green-900 p-2 rounded-lg inline-block">{message}</span>
+              <button
+                onClick={() => speakText(message)}
+                className="ml-2 p-1 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none"
+              >
+                <i className={`fas ${speaking ? 'fa-volume-up' : 'fa-volume-down'}`}></i>
+              </button>
                 </div>
               )}
             </div>
           ))}
         </div>
         <div className="flex items-center mt-4">
+          <button
+            onClick={toggleListening}
+            className={`px-4 py-2 rounded-l-lg ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+            title={isListening ? 'Stop Listening' : 'Start Voice Input'}
+          >
+            <i className="fas fa-microphone"></i> {isListening ? 'Stop' : 'Mic'}
+          </button>
           <input
             type="text"
-            placeholder="Type your message..."
-            className="flex-grow p-2 border border-green-300 rounded-l"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            disabled={loading}
+            placeholder="Type your message..."
+            className="flex-grow p-2 border border-gray-300 focus:outline-none focus:border-green-500"
           />
-          <input
-            type="file"
-            onChange={handleFileChange}
-            className="hidden"
-            id="file-upload"
-            disabled={loading}
-          />
-          <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 text-white p-2 rounded-l ml-2">
+          <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 text-white p-2 hover:bg-blue-600">
             Upload File
           </label>
+          <input
+            id="file-upload"
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+          />
           <button
             onClick={sendMessage}
-            style={{ backgroundColor: '#22c55e' }}
-            className="text-white p-2 rounded-r"
-            disabled={loading}
+            className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600"
           >
             Send
           </button>
