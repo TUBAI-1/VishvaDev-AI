@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const CHAT_HISTORY_KEY = 'chatHistory';
-const GEMINI_API_KEY = 'AIzaSyBWuBvnF8d_qVQfCP44-gi1xT6Q4rUXFCE';
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 const ChatDashboard = () => {
   const [input, setInput] = useState('');
