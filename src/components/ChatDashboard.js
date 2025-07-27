@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const CHAT_HISTORY_KEY = 'chatHistory';
+const GEMINI_API_KEY = 'AIzaSyBWuBvnF8d_qVQfCP44-gi1xT6Q4rUXFCE';
 
 const ChatDashboard = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const chatboxRef = useRef(null);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [doctorKey, setDoctorKey] = useState(null);
@@ -46,30 +48,114 @@ const ChatDashboard = () => {
     setMessages(prev => [...prev, [sender, message]]);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    addMessage('User', input);
-    setInput('');
-    setLoading(true);
+  const clearChat = () => {
+    setMessages([]);
+  };
+
+  const callGeminiAPI = async (content) => {
     try {
-      const response = await fetch(
-        'https://backend.buildpicoapps.com/aero/run/llm-api?pk=v1-Z0FBQUFBQm9ZNDlUUXhRX1BxdzdNb0JBYWFNdjRHbGhPLXp6YkVJRlpoMG5DeWUweHphS3VtN1FUbWZ6YUFpODNOVk1NNmp0LXVxOFhjN2p5aHFrUEJ1Yl94S3cyRF9hRVE9PQ==',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: input })
-        }
-      );
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`; 
+
+      
+      let requestBody;
+      if (Array.isArray(content) && content.some(item => item.type === 'image_url')) {
+        // Handle multimodal content for Gemini
+        const parts = content.map(item => {
+          if (item.type === 'text') {
+            return { text: item.text };
+          } else if (item.type === 'image_url') {
+            // Extract base64 data from data URL
+            const base64Data = item.image_url.url.split(',')[1];
+            return {
+              inlineData: {
+                mimeType: 'image/jpeg', // Assuming JPEG for simplicity, can be dynamic
+                data: base64Data,
+              },
+            };
+          }
+          return {};
+        });
+
+        requestBody = {
+          contents: [{
+            parts: parts
+          }],
+        };
+      } else {
+        // Handle text-only content for Gemini
+        requestBody = {
+          contents: [{
+            parts: [{
+              text: content,
+            }],
+          }],
+        };
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
       const data = await response.json();
       setLoading(false);
-      if (data.status === 'success') {
-        addMessage('CHANAKYA GPT', data.text);
+
+      if (response.ok) {
+        addMessage('CHANAKYA GPT', data.candidates[0].content.parts[0].text);
       } else {
-        addMessage('CHANAKYA GPT', 'Sorry, there was an error processing your request.');
+        addMessage('CHANAKYA GPT', `Error: ${data.error ? data.error.message : 'Unknown error'}`);
       }
     } catch (error) {
       setLoading(false);
       addMessage('CHANAKYA GPT', 'Unable to connect to the server. Please try again later.');
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!input.trim() && !selectedFile) return;
+
+    setLoading(true);
+    let currentInput = input.trim();
+    setInput(''); // Clear input immediately
+
+    let promptContent = currentInput;
+    let userDisplayMessage = currentInput;
+
+    if (selectedFile) {
+      userDisplayMessage = `Uploaded file: ${selectedFile.name}`;
+      addMessage('User', userDisplayMessage); // Display file upload message
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const fileContent = event.target.result;
+        if (selectedFile.type.startsWith('image/')) {
+          promptContent = [
+            { type: 'text', text: 'Please provide the analysis in bullet points, highlighting important suggestions:' },
+            { type: 'text', text: 'Analyze this image:' },
+            { type: 'image_url', image_url: { url: fileContent } },
+          ];
+          await callGeminiAPI(promptContent);
+        } else {
+          // Assume text-based file
+          promptContent = `Analyze the following prescription and provide the analysis in bullet points, highlighting important suggestions:\n\n${fileContent}`;
+          await callGeminiAPI(promptContent);
+        }
+        setSelectedFile(null); // Clear selected file after processing
+      };
+      reader.readAsDataURL(selectedFile);
+    } else {
+      addMessage('User', userDisplayMessage); // Display text message
+      await callGeminiAPI(promptContent);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
     }
   };
 
@@ -93,6 +179,15 @@ const ChatDashboard = () => {
             </div>
           )}
         </header>
+        <div className="flex justify-between items-center mt-4">
+          <h2 className="text-xl font-bold text-green-700">Chat</h2>
+          <button 
+            onClick={clearChat}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear Chat
+          </button>
+        </div>
         <div ref={chatboxRef} className="bg-white shadow-md rounded p-4 mt-6 h-96 overflow-y-scroll">
           {messages.map(([sender, message], idx) => (
             <div key={idx} className="mb-4">
@@ -118,6 +213,16 @@ const ChatDashboard = () => {
             onKeyDown={handleInputKeyDown}
             disabled={loading}
           />
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="hidden"
+            id="file-upload"
+            disabled={loading}
+          />
+          <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 text-white p-2 rounded-l ml-2">
+            Upload File
+          </label>
           <button
             onClick={sendMessage}
             style={{ backgroundColor: '#22c55e' }}
